@@ -37,8 +37,8 @@ export const registrationUser = CatchAsyncError(async (req:Request,res:Response,
         const activationCode = activationToken.activationCode;
 
         const data = {user: {name:user.name}, activationCode};
-
         
+        const html = await ejs.renderfile(path.join)
     }
     catch(error : any)
     {
