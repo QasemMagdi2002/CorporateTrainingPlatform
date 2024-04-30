@@ -7,6 +7,8 @@ require("dotenv").config;
 import ejs from "ejs";
 import path from "path";
 import sendMail from "../utils/sendMail";
+import { IUser } from "../models/user.models";
+
 // register error
 interface IRegisterationBody {
   name: string;
@@ -49,7 +51,7 @@ export const registrationUser = CatchAsyncError(
           template: "activation-mail.ejs",
           data,
         });
-        res.status(200).json({
+        res.status(201).json({
           succes: true,
           message: "please check your email to activate your account",
           activationToken: activationToken.token,
@@ -62,6 +64,11 @@ export const registrationUser = CatchAsyncError(
     }
   }
 );
+
+interface IActivationToken {
+    token: string;
+    activationCode: string;
+}
 
 export const createActivationToken = (user: any): IActivationToken => {
   const activationCode = Math.floor(1000 + Math.random() * 9000).toString();
@@ -77,7 +84,30 @@ export const createActivationToken = (user: any): IActivationToken => {
   return { token, activationCode };
 };
 
-interface IActivationToken {
-  token: string;
-  activationCode: string;
+// activate user
+interface IActivationRequest{
+  activation_token:string,
+  activation_code:string
 }
+
+export const activateUser = CatchAsyncError(
+  async(req:Request,res:Response,next:NextFunction) => 
+    {
+      try
+      {
+        const {activation_token,activation_code} = req.body as IActivationRequest;
+        const newUser : {user : IUser ; activationCode:string} = jwt.verify(
+          activation_token,
+          process.env.ACTIVATION_SECRET as string, 
+        ) as { user: IUser; activationCode:string }
+
+        if (newUser.activationCode !== activation_code)
+          {
+            return next(new ErrorHandler("invalid activation code",400 ))
+          }
+      }
+      catch(error:any)
+      {
+        return next(new ErrorHandler(error.message,400))
+      }
+})
