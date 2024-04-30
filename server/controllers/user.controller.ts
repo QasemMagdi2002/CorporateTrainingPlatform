@@ -125,3 +125,35 @@ export const activateUser = CatchAsyncError(
     }
   }
 );
+
+// login user
+
+interface ILoginRequest {
+  email: string;
+  password: string;
+}
+
+export const LoginUser = CatchAsyncError(
+  async (res: Response, req: Request, next: NextFunction) => {
+    try {
+      const { email, password } = req.body as ILoginRequest;
+      if (!email || !password) {
+        return next(new ErrorHandler("please enter email and password", 400));
+      }
+
+      const user = await userModel.findOne({ email }).select("password");
+
+      if (!user) {
+        return next(new ErrorHandler("invalid email or password", 400));
+      }
+
+      const isPasswordMatch = await user.comparePassword(password);
+
+      if (!isPasswordMatch) {
+        return next(new ErrorHandler("invalid email or password", 400));
+      }
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
