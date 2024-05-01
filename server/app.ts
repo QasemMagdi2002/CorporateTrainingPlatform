@@ -9,6 +9,8 @@ app.use(express.json( { limit:"100mb" }));
 
 app.use(cookieparser());
 
+express.urlencoded({ extended: true })
+
 app.use(cors(
     {
         origin: process.env.ORIGIN
