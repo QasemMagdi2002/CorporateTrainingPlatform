@@ -10,6 +10,7 @@ import sendMail from "../utils/sendMail";
 import { IUser } from "../models/user.models";
 import { accessTokenOptions, refreshTokenOptions, sendToken } from "../utils/jwt";
 import { redis } from "../utils/redis";
+import { getUserById } from "../services/user.services";
 
 // register error
 interface IRegisterationBody {
@@ -224,4 +225,17 @@ export const updateAccessToken = CatchAsyncError(
       return next(new ErrorHandler(error.message,400))
     }
   }
-)
+);
+
+// get user info
+
+export const getUserInfo = CatchAsyncError(async(req:Request,res:Response,next:NextFunction) => {
+  try{
+  const user_id = req.user?._id;
+   getUserById(user_id,res);
+  }
+  catch(error:any)
+  {
+    next(new ErrorHandler(error.message,400));
+  }
+})

@@ -1,6 +1,6 @@
 import { Response, Request, NextFunction } from 'express';
 import express from 'express';
-import { activateUser, LoginUser, registrationUser , logoutUser, updateAccessToken } from '../controllers/user.controller';
+import { activateUser, LoginUser, registrationUser , logoutUser, updateAccessToken, getUserInfo } from '../controllers/user.controller';
 import { authorizeRole, isAuth } from '../middleware/auth';
 
 const userRouter = express.Router();
@@ -13,5 +13,7 @@ userRouter.post("/login",LoginUser);
 
 userRouter.get("/logout",isAuth,logoutUser);
 
-userRouter.get("/refreshToken",updateAccessToken)
+userRouter.get("/refreshToken",updateAccessToken);
+
+userRouter.get("/me",isAuth,getUserInfo);
 export default userRouter;
