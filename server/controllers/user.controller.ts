@@ -15,7 +15,7 @@ import {
 } from "../utils/jwt";
 import { redis } from "../utils/redis";
 import { getUserById } from "../services/user.services";
-
+import cloudinary from "cloudinary"
 // register error
 interface IRegisterationBody {
   name: string;
@@ -343,4 +343,23 @@ export const updatePassword = CatchAsyncError(async(req:Request,res:Response,nex
   {
     return next(new ErrorHandler(error.message,400))
   }
-  })
+  });
+
+interface IUpdateProfilePicture {
+  avatar:string,
+}
+
+export const updateProfilePicture = CatchAsyncError(async(req:Request,res:Response,next:NextFunction) => {
+  try{
+    const { avatar } = req.body as IUpdateProfilePicture;
+    const user = req.user;
+    if(user?.avatar?.public_id){
+      await cloudinary.v2.uploader.destroy(user?.avatar?.public_id);
+      
+    }
+  }
+  catch(error:any)
+  {
+    return next(new ErrorHandler(error.message,400));
+  }
+})
