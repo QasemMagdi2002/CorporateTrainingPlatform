@@ -1,16 +1,18 @@
 import { model, Schema, Document, Model } from "mongoose";
 import mongoose from "mongoose";
 
-interface IReview extends Document{
-    user:object,
-    rating:number,
-    comment:string
-}
 
 interface IComment extends Document{
     user:object,
     comment:string,
-    commentReplies?:IComment[]
+    commentReplies?: IComment[];
+}
+
+interface IReview extends Document{
+    user:object,
+    rating:number,
+    comment:string
+    commentReplies:IComment[]
 }
 interface ILink extends Document{
     title:string,
@@ -21,6 +23,7 @@ interface ICourseData extends Document{
     description:string,
     videoUrl:string,
     videoThumbnail:object,
+    videoSection:string,
     videoLength:number,
     videoPlayer:string,
     links:ILink[],
@@ -68,8 +71,8 @@ const commentSchema = new Schema<IComment>({
 const courseDataSchema = new Schema<ICourseData>({
     title:String,
     description:String,
+    videoSection:String,
     videoUrl:String,
-    videoThumbnail:Object,
     videoLength:Number,
     videoPlayer:String,
     links:[linkSchema],
@@ -92,16 +95,13 @@ const courseSchema = new Schema<ICourse>({
     },
     estimatedPrice:{
         type:Number,
-        required:true
     },
     thumbnail:{
         public_id:{
             type:String,
-            required:true
         },
         url:{
             type:String,
-            required:true
         },
     },
     tags:{
