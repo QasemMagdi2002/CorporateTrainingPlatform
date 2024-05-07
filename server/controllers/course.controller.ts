@@ -7,6 +7,7 @@ import CourseModel from "../models/course.model";
 import courseRouter from "../routes/course.route";
 import { redis } from "../utils/redis";
 import userModel from "../models/user.models";
+import mongoose, { mongo } from "mongoose";
 
 //upload course
 export const uploadCourse = CatchAsyncError(
@@ -162,3 +163,45 @@ export const getCourseByUser = CatchAsyncError(
 );
 
 // add question in course
+
+interface IQuestion{
+    question:string,
+    courseId:string,
+    contentId:string
+}
+
+export const addQuestion = CatchAsyncError(async(req:Request,res:Response,next:NextFunction) => {
+    try{
+        const {question,courseId,contentId} : IQuestion = req.body;
+    
+        const course = await CourseModel.findById(courseId);
+
+        if(!mongoose.Types.ObjectId.isValid(contentId)){
+            return next(new ErrorHandler("invalid content",400));
+        }
+        const courseContent = course?.courseData?.find((item:any) => item._id.equals(contentId)); 
+
+        if(!courseContent){
+            return next(new ErrorHandler("invalid content",400))
+        }
+
+        const newQuestion : any = {
+            user:req.user,
+            question,
+            questionReplies: [],
+        };
+        courseContent.questions.push(newQuestion);
+
+        await course?.save();
+
+        res.status(200).json({
+            success:true,
+            course
+        })
+    }
+    catch(error:any){
+        return next(new ErrorHandler(error.message,500))
+    }
+});
+
+// answer course

@@ -4,8 +4,8 @@ import mongoose from "mongoose";
 
 interface IComment extends Document{
     user:object,
-    comment:string,
-    commentReplies?: IComment[];
+    question:string,
+    questionReplies?: IComment[];
 }
 
 interface IReview extends Document{
@@ -43,7 +43,7 @@ interface ICourse extends Document{
     benefits:{title:string}[],
     prerequisites:{title : string}[],
     reviews:IReview[],
-    courseData:ICourseData,
+    courseData:ICourseData[],
     ratings?:number,
     purchased?:number,
 }
@@ -64,8 +64,8 @@ const linkSchema = new Schema<ILink>({
 
 const commentSchema = new Schema<IComment>({
     user:Object,
-    comment:String,
-    commentReplies:[Object],
+    question:String,
+    questionReplies:[Object],
 })
 
 const courseDataSchema = new Schema<ICourseData>({
