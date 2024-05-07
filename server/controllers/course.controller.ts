@@ -8,6 +8,9 @@ import courseRouter from "../routes/course.route";
 import { redis } from "../utils/redis";
 import userModel from "../models/user.models";
 import mongoose, { mongo } from "mongoose";
+import ejs from "ejs";
+import path from "path";
+import sendMail from "../utils/sendMail";
 
 //upload course
 export const uploadCourse = CatchAsyncError(
@@ -164,44 +167,124 @@ export const getCourseByUser = CatchAsyncError(
 
 // add question in course
 
-interface IQuestion{
-    question:string,
-    courseId:string,
-    contentId:string
+interface IQuestion {
+  question: string;
+  courseId: string;
+  contentId: string;
 }
 
-export const addQuestion = CatchAsyncError(async(req:Request,res:Response,next:NextFunction) => {
-    try{
-        const {question,courseId,contentId} : IQuestion = req.body;
-    
-        const course = await CourseModel.findById(courseId);
+export const addQuestion = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { question, courseId, contentId }: IQuestion = req.body;
 
-        if(!mongoose.Types.ObjectId.isValid(contentId)){
-            return next(new ErrorHandler("invalid content",400));
-        }
-        const courseContent = course?.courseData?.find((item:any) => item._id.equals(contentId)); 
+      const course = await CourseModel.findById(courseId);
 
-        if(!courseContent){
-            return next(new ErrorHandler("invalid content",400))
-        }
+      if (!mongoose.Types.ObjectId.isValid(contentId)) {
+        return next(new ErrorHandler("invalid content", 400));
+      }
+      const courseContent = course?.courseData?.find((item: any) =>
+        item._id.equals(contentId)
+      );
 
-        const newQuestion : any = {
-            user:req.user,
-            question,
-            questionReplies: [],
+      if (!courseContent) {
+        return next(new ErrorHandler("invalid content", 400));
+      }
+
+      const newQuestion: any = {
+        user: req.user,
+        question,
+        questionReplies: [],
+      };
+      courseContent.questions.push(newQuestion);
+
+      await course?.save();
+
+      res.status(200).json({
+        success: true,
+        course,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
+// answer course  question
+
+interface IAddAnswer {
+  answer: string;
+  questionId: string;
+  courseId: string;
+  contentId: string;
+}
+
+export const addAnswer = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { answer, questionId, courseId, contentId } = req.body;
+
+      const course = await CourseModel.findById(courseId);
+
+      if (!mongoose.Types.ObjectId.isValid(contentId)) {
+        return next(new ErrorHandler("invalid content object id is wrong", 400));
+      }
+
+      const content = course?.courseData?.find((item: any) => 
+        item._id == contentId
+      );
+      if (!content) {
+        return next(new ErrorHandler(`invalid content. couldnt find specified content at id ${content}`, 400));
+      }
+
+      const newAns: any = {
+        user: req.user,
+        answer,
+      };
+
+      
+      const question = content.questions.find((item: any) => 
+        item._id.equals(questionId)
+      );
+
+      if (!question) {
+        return next(new ErrorHandler("invalid question id", 400));
+      }
+
+      question.questionReplies?.push(newAns);
+
+      await course?.save();
+
+      if (req.user?._id === question.user._id) {
+      } else {
+        const data = {
+          name: question.user.name,
+          title: content.title,
         };
-        courseContent.questions.push(newQuestion);
+        const html = await ejs.renderFile(
+          path.join(__dirname, "../mails/question-reply.ejs"),
+          data
+        );
 
-        await course?.save();
+        try {
+            await sendMail({
+                email:question.user.email,
+                subject:"Question reply",
+                template:"question-reply.ejs",
+                data
+            }
+            )
+        } catch (error: any) {
+          return next(new ErrorHandler(error.message, 500));
+        }
+      }
 
-        res.status(200).json({
-            success:true,
-            course
-        })
+      res.status(200).json({
+        success:true,
+        course
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
     }
-    catch(error:any){
-        return next(new ErrorHandler(error.message,500))
-    }
-});
-
-// answer course
+  }
+);
