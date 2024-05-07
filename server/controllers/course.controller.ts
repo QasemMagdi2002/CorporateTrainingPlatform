@@ -6,6 +6,7 @@ import { createCourse } from "../services/course.service";
 import CourseModel from "../models/course.model";
 import courseRouter from "../routes/course.route";
 import { redis } from "../utils/redis";
+import userModel from "../models/user.models";
 
 //upload course
 export const uploadCourse = CatchAsyncError(
@@ -85,17 +86,16 @@ export const getaSingleCourse = CatchAsyncError(
         });
       } else {
         const course = await CourseModel.findById(req.params.id).select(
-            "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
-          );
+          "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
+        );
 
-          await redis.set(courseId,JSON.stringify(course));
+        await redis.set(courseId, JSON.stringify(course));
 
-          res.status(200).json({
-            success: true,
-            course,
-          });
+        res.status(200).json({
+          success: true,
+          course,
+        });
       }
-      
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
@@ -107,15 +107,58 @@ export const getaSingleCourse = CatchAsyncError(
 export const getAllCourses = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const course = await CourseModel.find().select(
-        "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
+      const isCacheExist = await redis.get("allCourses");
+
+      if (isCacheExist) {
+        const courses = JSON.parse(isCacheExist);
+        res.status(200).json({
+          success: true,
+          courses,
+        });
+      } else {
+        const courses = await CourseModel.find().select(
+          "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
+        );
+
+        await redis.set("allCourses", JSON.stringify(courses));
+
+        res.status(200).json({
+          success: true,
+          courses,
+        });
+      }
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
+// get course content for registered users
+
+export const getCourseByUser = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userCourseList = req.user?.courses;
+      const courseId = req.params.id;
+
+      const courseExists = userCourseList?.find(
+        (course: any) => courseId === course._id.toString()
       );
+      if (!courseExists) {
+        return next(new ErrorHandler("you cant access this course!", 404));
+      }
+      const course = await CourseModel.findById(courseId);
+
+      const courseContent = course?.courseData;
+
       res.status(200).json({
         success: true,
-        course,
+        courseContent,
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
   }
 );
+
+// add question in course
