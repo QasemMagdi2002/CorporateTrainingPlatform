@@ -6,7 +6,7 @@ import { createCourse } from "../services/course.service";
 import CourseModel from "../models/course.model";
 import courseRouter from "../routes/course.route";
 import { redis } from "../utils/redis";
-import userModel from "../models/user.models";
+import userModel, { IUser } from "../models/user.models";
 import mongoose, { mongo } from "mongoose";
 import ejs from "ejs";
 import path from "path";
@@ -227,14 +227,21 @@ export const addAnswer = CatchAsyncError(
       const course = await CourseModel.findById(courseId);
 
       if (!mongoose.Types.ObjectId.isValid(contentId)) {
-        return next(new ErrorHandler("invalid content object id is wrong", 400));
+        return next(
+          new ErrorHandler("invalid content object id is wrong", 400)
+        );
       }
 
-      const content = course?.courseData?.find((item: any) => 
-        item._id == contentId
+      const content = course?.courseData?.find(
+        (item: any) => item._id == contentId
       );
       if (!content) {
-        return next(new ErrorHandler(`invalid content. couldnt find specified content at id ${content}`, 400));
+        return next(
+          new ErrorHandler(
+            `invalid content. couldnt find specified content at id ${content}`,
+            400
+          )
+        );
       }
 
       const newAns: any = {
@@ -242,8 +249,7 @@ export const addAnswer = CatchAsyncError(
         answer,
       };
 
-      
-      const question = content.questions.find((item: any) => 
+      const question = content.questions.find((item: any) =>
         item._id.equals(questionId)
       );
 
@@ -267,21 +273,20 @@ export const addAnswer = CatchAsyncError(
         );
 
         try {
-            await sendMail({
-                email:question.user.email,
-                subject:"Question reply",
-                template:"question-reply.ejs",
-                data
-            }
-            )
+          await sendMail({
+            email: question.user.email,
+            subject: "Question reply",
+            template: "question-reply.ejs",
+            data,
+          });
         } catch (error: any) {
           return next(new ErrorHandler(error.message, 500));
         }
       }
 
       res.status(200).json({
-        success:true,
-        course
+        success: true,
+        course,
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
@@ -291,55 +296,100 @@ export const addAnswer = CatchAsyncError(
 
 // add review to course
 
-interface IReview{
-  review:string,
-  courseId:string,
-  rating:string,
-  userId:string,
+interface IReview {
+  review: string;
+  courseId: string;
+  rating: string;
+  userId: string;
 }
 
-export const addReview = CatchAsyncError(async (req:Request,res:Response,next:NextFunction) => {
-  try{
-    const userCourseList = req.user?.courses;
+export const addReview = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userCourseList = req.user?.courses;
 
-    const courseId = req.params.id;
+      const courseId = req.params.id;
 
-    const Exist = userCourseList?.some((course:any)=> course._id.toString() === courseId.toString())
+      const Exist = userCourseList?.some(
+        (course: any) => course._id.toString() === courseId.toString()
+      );
 
-    if(!Exist){
-      return next(new ErrorHandler("you do not have access to this course",404));
+      if (!Exist) {
+        return next(
+          new ErrorHandler("you do not have access to this course", 404)
+        );
+      }
+      const course = await CourseModel.findById(courseId);
+
+      const { review, rating } = req.body as IReview;
+      const reviewData: any = {
+        user: req.user,
+        comment: review,
+        rating: rating,
+      };
+      course?.reviews.push(reviewData);
+
+      let avg = 0;
+      course?.reviews.forEach((rev: any) => {
+        avg += rev.rating;
+      });
+      if (course) {
+        course.ratings = avg / course.reviews.length;
+      }
+
+      await course?.save();
+
+      const notification = {
+        title: "New review Recieved",
+        message: `${req.user?.name} has made a review in ${course?.name}`,
+      };
+      res.status(200).json({
+        success: true,
+        course,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
     }
-    const course = await CourseModel.findById(courseId)
-    
-    const {review,rating} = req.body as IReview
-    const reviewData :any = {
-      user:req.user,
-      comment:review,
-      rating:rating
-    }
-    course?.reviews.push(reviewData);
-    
-    let avg = 0;
-    course?.reviews.forEach((rev:any)=>{
-      avg+=rev.rating;
-    });
-    if(course){
-      course.ratings = avg / course.reviews.length;
-    }
-
-    await course?.save();
-
-    const notification = {
-      title:"New review Recieved",
-      message: `${req.user?.name} has made a review in ${course?.name}`  
-    }
-    res.status(200).json({
-      success:true,
-      course
-    })
   }
-  catch(error:any){
-    return next(new ErrorHandler(error.message,500));
-  }
-})
+);
 
+// add reply to review
+interface IReply {
+  question: string;
+  reviewId: string;
+  courseId: string;
+}
+export const addReplyToReview = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { courseId, reviewId, question } = req.body as IReply;
+
+      const course = await CourseModel.findById(courseId);
+      if (!course) {
+        return next(new ErrorHandler("could not find course", 404));
+      }
+      const review = course.reviews.find(
+        (rev: any) => rev._id.toString() === reviewId
+      );
+      if (!review) {
+        return next(new ErrorHandler("could not find review", 404));
+      }
+      const replyData: any = {
+        user: req.user,
+        question,
+      };
+      if(!review.commentReplies){
+        review.commentReplies = []
+      }
+      review.commentReplies.push(replyData);
+      await course.save();
+
+      res.status(200).json({
+        success: true,
+        course,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
