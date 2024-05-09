@@ -288,3 +288,58 @@ export const addAnswer = CatchAsyncError(
     }
   }
 );
+
+// add review to course
+
+interface IReview{
+  review:string,
+  courseId:string,
+  rating:string,
+  userId:string,
+}
+
+export const addReview = CatchAsyncError(async (req:Request,res:Response,next:NextFunction) => {
+  try{
+    const userCourseList = req.user?.courses;
+
+    const courseId = req.params.id;
+
+    const Exist = userCourseList?.some((course:any)=> course._id.toString() === courseId.toString())
+
+    if(!Exist){
+      return next(new ErrorHandler("you do not have access to this course",404));
+    }
+    const course = await CourseModel.findById(courseId)
+    
+    const {review,rating} = req.body as IReview
+    const reviewData :any = {
+      user:req.user,
+      comment:review,
+      rating:rating
+    }
+    course?.reviews.push(reviewData);
+    
+    let avg = 0;
+    course?.reviews.forEach((rev:any)=>{
+      avg+=rev.rating;
+    });
+    if(course){
+      course.ratings = avg / course.reviews.length;
+    }
+
+    await course?.save();
+
+    const notification = {
+      title:"New review Recieved",
+      message: `${req.user?.name} has made a review in ${course?.name}`  
+    }
+    res.status(200).json({
+      success:true,
+      course
+    })
+  }
+  catch(error:any){
+    return next(new ErrorHandler(error.message,500));
+  }
+})
+
