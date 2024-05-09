@@ -1,5 +1,5 @@
 import express from "express";
-import { addAnswer, addQuestion, addReplyToReview, addReview, editCourse, getAllCourses, getaSingleCourse, getCourseByUser, uploadCourse } from "../controllers/course.controller";
+import { addAnswer, addQuestion, addReplyToReview, addReview, editCourse, getAllCourses, getAllCoursesAdmin, getaSingleCourse, getCourseByUser, uploadCourse } from "../controllers/course.controller";
 import { authorizeRole, isAuth } from "../middleware/auth";
 const courseRouter = express.Router();
 
@@ -56,6 +56,14 @@ courseRouter.put(
   isAuth,
   authorizeRole("admin"),
   addReplyToReview
+);
+
+
+courseRouter.get(
+  "/get-courses-admin",
+  isAuth,
+  authorizeRole("admin"),
+  getAllCoursesAdmin
 );
 
 export default courseRouter;
