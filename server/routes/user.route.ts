@@ -1,6 +1,6 @@
 import { Response, Request, NextFunction } from 'express';
 import express from 'express';
-import { activateUser, LoginUser, registrationUser , logoutUser, updateAccessToken, getUserInfo, socialAuth, updateUserInfo, updatePassword, updateProfilePicture, getAllUsers } from '../controllers/user.controller';
+import { activateUser, LoginUser, registrationUser , logoutUser, updateAccessToken, getUserInfo, socialAuth, updateUserInfo, updatePassword, updateProfilePicture, getAllUsers, updateUserRole } from '../controllers/user.controller';
 import { authorizeRole, isAuth } from '../middleware/auth';
 const userRouter = express.Router();
 
@@ -25,4 +25,7 @@ userRouter.put("/update-user-password",isAuth,updatePassword);
 userRouter.put("/update-user-avatar",isAuth,updateProfilePicture);
 
 userRouter.get("/get-users",isAuth,authorizeRole("admin"),getAllUsers);
+
+userRouter.put("/update-role",isAuth,authorizeRole("admin"),updateUserRole);
+
 export default userRouter;

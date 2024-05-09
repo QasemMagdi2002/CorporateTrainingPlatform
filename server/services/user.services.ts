@@ -26,3 +26,14 @@ export const getAllUsersService =
             users
         });
     }
+
+// update user role
+
+export const updateUserRoleService = async (res:Response,id:String,role:string) => {
+    const user = await userModel.findByIdAndUpdate(id, {role}, {new : true});
+
+    res.status(201).json({
+        success:true,
+        user,
+    })
+} 
